@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sætlist‑planlægger</title>
+<style>
+  :root{
+    --bg0:#070b10;
+    --bg1:#0b1420;
+    --card:#0f1a27cc;
+    --card2:#0f1a2766;
+    --stroke:#ffffff18;
+    --stroke2:#ffffff0f;
+    --txt:#e9eef6;
+    --muted:#aeb8c8;
+    --green:#2dd4bf;
+    --green2:#22c55e;
+    --shadow: 0 18px 50px rgba(0,0,0,.55);
+    --r:18px;
+    --pad:16px;
+    --headerH:74px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--txt);
+    background:
+      radial-gradient(1000px 600px at 20% 10%, rgba(45,212,191,.18), transparent 55%),
+      radial-gradient(900px 700px at 80% 0%, rgba(34,197,94,.14), transparent 55%),
+      linear-gradient(180deg, var(--bg0), var(--bg1));
+    overflow:hidden;
+  }
+
+  /* Fixed header */
+  .header{
+    position:fixed;
+    top:0; left:0; right:0;
+    height:calc(var(--headerH) + env(safe-area-inset-top));
+    padding:calc(10px + env(safe-area-inset-top)) var(--pad) 10px var(--pad);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.12));
+    backdrop-filter: blur(14px);
+    border-bottom:1px solid var(--stroke2);
+    z-index:50;
+  }
+  .concert{
+    flex: 1 1 auto;
+    height:44px;
+    padding:0 14px;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--stroke);
+    color:var(--txt);
+    outline:none;
+    font-size:16px;
+  }
+  .iconBtn{
+    width:46px; height:46px;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--stroke);
+    color:var(--txt);
+    display:grid;
+    place-items:center;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .iconBtn:active{transform: translateY(1px)}
+  .iconBtn.on{
+    border-color: rgba(45,212,191,.55);
+    background: rgba(45,212,191,.14);
+    box-shadow: 0 0 0 3px rgba(45,212,191,.10);
+  }
+  .status{
+    margin-left:auto;
+    color: rgba(233,238,246,.65);
+    font-size:12px;
+    white-space:nowrap;
+  }
+
+  /* Content scroller */
+  .content{
+    position:fixed;
+    inset:0;
+    padding-top: calc(var(--headerH) + env(safe-area-inset-top) + 10px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .grid{
+    display:grid;
+    gap:14px;
+    padding: 0 var(--pad) 20px;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items:start;
+  }
+  @media (max-width: 980px){
+    .grid{grid-template-columns: 1fr; }
+  }
+
+  .col{
+    border-radius: 22px;
+    padding: 14px;
+    background: rgba(255,255,255,.04);
+    border:1px solid var(--stroke2);
+    box-shadow: var(--shadow);
+    min-height: 320px;
+  }
+  .colHead{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .colTitleWrap{display:flex; flex-direction:column; gap:2px;}
+  .colTitle{font-weight:800; font-size:20px; letter-spacing:.2px;}
+  .colCount{font-size:12px; color:rgba(233,238,246,.65)}
+  .colTools{display:flex; gap:8px; align-items:center;}
+  .toolBtn{position:relative;
+
+    width:42px; height:42px;
+    border-radius:14px;
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--stroke);
+    display:grid; place-items:center;
+    color:var(--txt);
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .toolBtn .icon{font-size:18px; line-height:1;}
+  .toolBtn .arrow{position:absolute; right:8px; bottom:6px; font-size:12px; opacity:0.85;}
+  .toolBtn.on{border-color: rgba(45,212,191,.55); background: rgba(45,212,191,.14)}
+  .toolBtn.hidden{display:none !important;}
+  .list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding: 6px 2px;
+    min-height: 60px;
+  }
+  .card{
+    position:relative;
+    display:flex;
+    align-items:stretch;
+    gap:10px;
+    padding: 12px 12px;
+    border-radius: 18px;
+    border:1px solid var(--stroke);
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    box-shadow: 0 12px 26px rgba(0,0,0,.35);
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action: pan-y; /* allow scroll by default */
+  }
+  .card.locked{border-color: rgba(45,212,191,.30)}
+  .num{
+    width:34px; flex:0 0 34px;
+    height:34px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--stroke2);
+    display:grid; place-items:center;
+    font-weight:800;
+    color: rgba(233,238,246,.75);
+  }
+  
+  .leftStack{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    flex:0 0 40px;
+  }
+  .dragHandle{
+    width:34px; height:28px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border:1px solid var(--stroke2);
+    display:grid; place-items:center;
+    color: rgba(233,238,246,.85);
+    opacity:.85;
+    padding:0;
+  }
+  .dragHandle:active{transform: translateY(1px)}
+.meta{min-width:0; flex:1 1 auto;}
+  .title{
+    font-weight:800;
+    font-size:18px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-bottom:4px;
+  }
+  .sub{
+    color: rgba(233,238,246,.70);
+    font-size:12.5px;
+    line-height:1.25;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .cardBtns{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex:0 0 auto;
+  }
+  .miniBtn{
+    width:42px; height:42px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.06);
+    border:1px solid var(--stroke);
+    display:grid; place-items:center;
+    color:var(--txt);
+  }
+  .miniBtn:active{transform: translateY(1px)}
+  .miniBtn.star.on{border-color: rgba(45,212,191,.55); background: rgba(45,212,191,.14)}
+  .miniBtn.drag{opacity:.85}
+  .dragHandle{ touch-action:none; -webkit-touch-callout:none; }
+  /* Hide drag handle when locked */
+  .card.locked .miniBtn.drag{display:none;}
+  .card.locked .dragHandle{display:none;}
+  .card.colLocked .miniBtn.drag{display:none;}
+  .card.colLocked .dragHandle{display:none;}
+
+
+  /* Drag visuals */
+  .ghost{
+    position:fixed;
+    z-index:1000;
+    pointer-events:none;
+    width: min(560px, calc(100vw - 40px));
+    opacity:.92;
+    box-shadow: 0 18px 40px rgba(0,0,0,.45);
+  }
+  .dropHint{
+    outline: 2px dashed rgba(45,212,191,.55);
+    outline-offset: 6px;
+  }
+  .placeholder{
+    height: 68px;
+    border-radius: 18px;
+    border: 1px dashed rgba(255,255,255,.25);
+    background: rgba(255,255,255,.03);
+  }
+
+  /* Print: hide stars, buttons, header */
+  @media print{
+    body{overflow:visible; background:#fff; color:#000;}
+    .header,.status,.toolBtn,.miniBtn,.colTools{display:none !important;}
+    .content{position:static; padding:0;}
+    .grid{grid-template-columns: 1fr 1fr; padding:0; gap:16px;}
+    .col{box-shadow:none; border:1px solid #ddd; background:#fff; min-height:auto;}
+    .card{box-shadow:none; background:#fff; border:1px solid #ddd;}
+    .sub{color:#333;}
+  }
+
+  /* A: undgå tekstmarkering under drag */
+  .card, .card *{ -webkit-user-select:none; user-select:none; }
+  .miniBtn.drag{ touch-action:none; -webkit-touch-callout:none; }
+/* ===== Library modal ===== */
+.modalOverlay{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:40px 18px;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:9999;}
+.modalOverlay[hidden]{display:none !important;}
+.modalCard{width:min(980px,100%);background:linear-gradient(180deg,rgba(25,30,35,.98),rgba(15,18,22,.98));border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:16px 16px 18px;box-shadow:0 14px 50px rgba(0,0,0,.55);}
+.modalTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.modalTitle{font-weight:800;font-size:18px;}
+.modalClose{width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;font-size:22px;cursor:pointer}
+.libHint{padding:10px 12px;border:1px dashed rgba(255,255,255,.16);border-radius:12px;color:rgba(255,255,255,.85);font-size:13px;margin-bottom:10px}
+.libActions{display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.libBtn{display:inline-flex;align-items:center;gap:10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.18);color:#fff;padding:10px 14px;font-weight:700;cursor:pointer}
+.libBtn:hover{background:rgba(255,255,255,.08)}
+.libBtn.libGhost{margin-left:auto;background:rgba(255,255,255,.06)}
+.libIco{width:18px;text-align:center;opacity:.95}
+.libSmall{color:rgba(255,255,255,.72);font-size:12px;margin-bottom:12px}
+.libSectionTop{display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.10);padding-top:12px;margin-top:6px;gap:10px}
+.libSectionTitle{font-weight:800}
+.libSectionRight{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.libBtn.libPill{background:rgba(120,80,220,.12);border-color:rgba(120,80,220,.35)}
+.libDangerLink{background:transparent;border:none;color:rgba(255,255,255,.70);cursor:pointer;font-weight:700;padding:6px 8px;border-radius:10px}
+.libDangerLink:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.88)}
+.libDangerLink .warn{margin-right:6px}
+.libList{margin-top:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;overflow:auto;max-height:calc(100vh - 340px);-webkit-overflow-scrolling:touch}
+
+/* Prevent background scroll while modal is open */
+body.modalOpen{overflow:hidden}
+.libRow{display:grid;grid-template-columns: 2.1fr .7fr .5fr 1.4fr 1.4fr 96px;gap:10px;padding:10px 12px;align-items:start;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.libRow:first-child{border-top:none}
+.libRow .t{font-weight:800}
+.libRow .m{color:rgba(255,255,255,.75);font-size:12px;line-height:1.25}
+.libRow .actions{display:flex;justify-content:flex-end;gap:8px}
+.miniBtn{width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.20);color:#fff;cursor:pointer}
+.miniBtn:hover{background:rgba(255,255,255,.08)}
+.libEditorWrap{margin-top:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;background:rgba(0,0,0,.16)}
+.libEditorGrid{display:grid;grid-template-columns: 1.4fr .7fr .5fr 1fr 1fr;gap:10px}
+.libEditorGrid input,.libEditorGrid textarea{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.22);color:#fff;padding:10px 12px;font-weight:650}
+.libEditorGrid textarea{min-height:56px;resize:vertical}
+.libEditorBar{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+</style>
+</head>
+<body>
+  <div class="header">
+    <input id="concertName" class="concert" placeholder="Koncertnavn" />
+    <button id="btnMix" class="iconBtn on" title="Mix" aria-label="Mix">
+      
+      ⟳</button>
+    <button id="btnLibrary" class="iconBtn" title="Bibliotek (senere)" aria-label="Bibliotek">
+      
+      ⛭</button>
+    <button id="btnPrint" class="iconBtn" title="Print" aria-label="Print">
+      
+      ⎙</button>
+    <button id="btnReset" class="iconBtn" title="Gendan" aria-label="Gendan">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 4v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="status" class="status">JS …</div>
+  </div>
+
+  <div class="content">
+    <div id="grid" class="grid"></div>
+  </div>
+
+<script>
+(() => {
+  const KEY = "saetliste_v3_4_state";
+  const MAX_PER_SET = 9;
+
+  // ===== Factory data (sample) =====
+  const FACTORY_REP = [
+    {id:"t1", title:"All The Things You Are", key:"Cm/eb", tempo:138, notes:"Intro (4 sidste t.); vokal+sax; solo bas/gui; solo sax; vokal (rit.)"},
+    {id:"t2", title:"Brevet", key:"Dm", tempo:66, notes:"Intro (D.S. og ud); vokal; solo fl (AA+B); vokal (D.S. og ud)"},
+    {id:"t3", title:"Dansevise", key:"Am", tempo:160, notes:"Intro (8t u.sax); vokal; solo sax; solo gui/vok (fra t. 21); coda (rubato)"},
+    {id:"t4", title:"Deirdres Samba", key:"Cm", tempo:72, notes:"Intro (sidste 8t u.fl); vokal+ml spil (8t); vokal+ml spil (8t); vokal (slut på 4-slag)"},
+    {id:"t5", title:"Desafinado", key:"F", tempo:132, notes:"Intro 8t u.sax; vokal; solo sax; vokal+sax fra C; outro (7t.)"},
+    {id:"t6", title:"Dejlighedssang", key:"Bb", tempo:88, notes:"Instr sax+bas; vokal+gui; vokal+bas; tutti (f); solo sax; vokal (u.Sax); vokal+sax; tutti (p)"},
+    {id:"t7", title:"Hvorfor er lykken så lunefuld", key:"Fm", tempo:54, notes:"Intro vers (t1-12 u.sax); vokal; solo sax; solo gui/vok (B); outro intro (rit bas)"},
+    {id:"t8", title:"Libertango", key:"Cm", tempo:116, notes:"A0+A1-sax; B gui; A2 gui; A0+A1 vok; B+A2 sax; A0-sax; A1-gui+bas (lyrisk); B+A2 vokal+sax"},
+    {id:"t9", title:"Nature Boy", key:"Dm", tempo:108, notes:"Intro (bas4t+gui4t); vokal (1/2 H 1/2 S); solo fl; vokal (H+S)/Da capo; outro (tutti)"},
+    {id:"t10", title:"Quiet Night Of Quiet Stars", key:"Bb", tempo:63, notes:"Intro (t25 og ud); vokal; solo-sax; solo-gui; vokal+sax (u. rit.)"},
+    {id:"t11", title:"Round Midnight", key:"Cm", tempo:60, notes:"Intro sax (solo)+gui; instr; vokal; solo-sax (2xA)/Gui (B+A); sax (2xA, mel)/vok (B+A)"},
+    {id:"t12", title:"Sakta vi gå gennem stan", key:"Bb", tempo:108, notes:"Instr sax; vokal; solo gui/bas; vokal+sax (rit.)"},
+    {id:"t13", title:"There Will Never Be Another You", key:"C", tempo:152, notes:"Intro (4 sidste t); vokal; chase vok/fl; chase gui/bas; vokal+fl; outro (3x3 t + sidste)"},
+    {id:"t14", title:"Those Who Were", key:"G + Bb", tempo:50, notes:"Intro (4t); instr sax; vokal/+sax fra B; vokal+sax; solo sax; outro (4t.)"},
+    {id:"t15", title:"This Masquerade", key:"Bbm", tempo:108, notes:"Intro (4t); instr sax+4t; vokal+4t; solo gui (AB)/vok+sax (A); outro (3 x t.13-16, rit)"},
+    {id:"t16", title:"Wave", key:"Eb", tempo:126, notes:"Intro 8t; vokal; solo gui; solo sax AA/vok BC; outro (8t.)"},
+    {id:"t17", title:"What It Means To Me", key:"Cm/Eb", tempo:60, notes:"Instr sax; vokal; solo-sax+vok; solo gui; vokal+sax fra B"},
+    {id:"t18", title:"Autumn Leaves", key:"Cm", tempo:138, notes:"Intro sax (rubato); instr sax; vokal; solo sax; outro (rit)"},
+  ];
+
+  // ===== State =====
+  /** state = { concertName, cols: {set1: {locked, filters}, rep:..., set2:...}, itemsByCol: {set1:[itemState], rep:[...], set2:[...] } } */
+  const blankState = () => ({
+    concertName: "",
+    lockSeqCounter: 0,
+    cols: {
+      set1: { locked:false, fTitle:0, fKey:0, fTempo:0 },
+      rep:  { locked:false, fTitle:0, fKey:0, fTempo:0 },
+      set2: { locked:false, fTitle:0, fKey:0, fTempo:0 },
+    },
+    itemsByCol: { set1:[], rep:[], set2:[] },
+  });
+
+  const colOrder = ["set1","rep","set2"];
+  const colLabels = {set1:"Sæt 1", rep:"Repertoire", set2:"Sæt 2"};
+
+  function normalizeState(s){
+    if(!s || !s.itemsByCol || !s.cols) return null;
+    for(const k of colOrder){
+      if(!Array.isArray(s.itemsByCol[k])) s.itemsByCol[k] = [];
+      if(!s.cols[k]) s.cols[k] = {locked:false,fTitle:0,fKey:0,fTempo:0};
+      // Normalize items (backwards compatible)
+      for(const it of s.itemsByCol[k]){
+        if(!it) continue;
+        if(typeof it.title!=="string") it.title = String(it.title ?? "");
+        if(typeof it.key!=="string") it.key = String(it.key ?? "");
+        if(typeof it.notes!=="string") it.notes = String(it.notes ?? "");
+        if(typeof it.cues!=="string") it.cues = String(it.cues ?? "");
+        if(typeof it.locked!=="boolean") it.locked = !!it.locked;
+        if(!it.uid) it.uid = (it.id || ("u"+Math.random().toString(16).slice(2)))+"_"+Math.random().toString(16).slice(2);
+      }
+    }
+    return s;
+  }
+
+  function factoryState(){
+    const s = blankState();
+    // Put everything into repertoire by default
+    s.itemsByCol.rep = FACTORY_REP.map((t,idx)=> ({...t, cues:(t.cues||""), locked:false, lockSeq:null, uid:t.id+"_"+idx+"_"+Math.random().toString(16).slice(2) }));
+    return s;
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return factoryState();
+      const s = normalizeState(JSON.parse(raw));
+      // If state is empty (common after earlier experiments), restore
+      const count = colOrder.reduce((a,k)=>a + (s?.itemsByCol?.[k]?.length||0),0);
+      if(!s || count===0) return factoryState();
+      return s;
+    }catch(e){
+      return factoryState();
+    }
+  }
+
+  function saveState(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  // ===== Render =====
+  const grid = document.getElementById("grid");
+  const statusEl = document.getElementById("status");
+  const concertEl = document.getElementById("concertName");
+
+  function iconStar(filled){
+    return filled
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.3l-6.18 3.7 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.73L18.18 21z"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 17.3l-6.18 3.7 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.73L18.18 21z\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"/></svg>';
+  }
+  function iconAa(){ return '<span style="font-weight:800">Aa</span>'; }
+  function iconKey(){ return "𝄞"; }
+  function iconTempo(){ return "♩="; }
+  function iconDrag(){ return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 5h.01M14 5h.01M10 12h.01M14 12h.01M10 19h.01M14 19h.01\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>'; }
+
+  function filterStateStr(v){ return v===1 ? "↑" : v===2 ? "↓" : ""; }
+
+  function applyFilters(colKey, items){
+    const f = state.cols[colKey];
+    // Locked titles must not move due to filters
+    const locked = items.filter(x=>x.locked);
+    const free = items.filter(x=>!x.locked);
+    // only sort modes for now (not filter-out)
+    const byTitle = (a,b)=> a.title.localeCompare(b.title, 'da');
+    const byKey = (a,b)=> (a.key||"").localeCompare(b.key||"", 'da');
+    const byTempo = (a,b)=> (a.tempo||0) - (b.tempo||0);
+
+    let out = free.slice();
+    if(f.fTitle){ out.sort(f.fTitle===1 ? byTitle : (a,b)=> byTitle(b,a)); }
+    if(f.fKey){ out.sort(f.fKey===1 ? byKey : (a,b)=> byKey(b,a)); }
+    if(f.fTempo){ out.sort(f.fTempo===1 ? byTempo : (a,b)=> byTempo(b,a)); }
+
+    return locked.concat(out);
+  }
+
+  function render(){
+    grid.innerHTML = "";
+    for(const colKey of colOrder){
+      // Hide repertoire column entirely when empty
+      if(colKey==="rep" && (state.itemsByCol.rep||[]).length===0){
+        continue;
+      }
+      const col = document.createElement("section");
+      col.className = "col";
+      col.dataset.col = colKey;
+
+      const head = document.createElement("div");
+      head.className = "colHead";
+
+      const tw = document.createElement("div");
+      tw.className = "colTitleWrap";
+      const title = document.createElement("div");
+      title.className = "colTitle";
+      title.textContent = colLabels[colKey];
+      const count = document.createElement("div");
+      count.className = "colCount";
+      const n = state.itemsByCol[colKey].length;
+      count.textContent = `${n} titler`;
+      tw.appendChild(title); tw.appendChild(count);
+
+      const tools = document.createElement("div");
+      tools.className = "colTools";
+
+      const f = state.cols[colKey];
+
+      const bTitle = btnTool("filterTitle", iconAa(), f.fTitle!==0, filterStateStr(f.fTitle));
+      const bKey = btnTool("filterKey", iconKey(), f.fKey!==0, filterStateStr(f.fKey));
+      const bTempo = btnTool("filterTempo", iconTempo(), f.fTempo!==0, filterStateStr(f.fTempo));
+
+      // Hide filter buttons if column is locked OR if there's nothing meaningful to sort.
+      // Locked titles must stay fixed at the top, and if <= 1 title is unlocked, sorting is pointless.
+      const rawItems = state.itemsByCol[colKey] || [];
+      const unlockedCount = rawItems.filter(x => !x.locked).length;
+      if(f.locked || unlockedCount <= 1){
+        bTitle.classList.add("hidden");
+        bKey.classList.add("hidden");
+        bTempo.classList.add("hidden");
+      }
+
+      const bLockCol = btnTool("lockCol", iconStar(f.locked), f.locked);
+
+      tools.appendChild(bTitle);
+      tools.appendChild(bKey);
+      tools.appendChild(bTempo);
+      tools.appendChild(bLockCol);
+
+      head.appendChild(tw);
+      head.appendChild(tools);
+      col.appendChild(head);
+
+      const list = document.createElement("div");
+      list.className = "list";
+      list.dataset.col = colKey;
+
+      const displayItems = applyFilters(colKey, state.itemsByCol[colKey]);
+      displayItems.forEach((it, idx) => {
+        const card = document.createElement("div");
+        card.className = "card" + (it.locked ? " locked" : "") + (state.cols[colKey].locked ? " colLocked" : "");
+        card.dataset.uid = it.uid;
+        card.dataset.col = colKey;
+        card.dataset.index = String(idx);
+
+        const left = document.createElement("div");
+        left.className = "leftStack";
+
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = String(idx+1);
+
+        const drag = document.createElement("button");
+        drag.className = "dragHandle";
+        drag.innerHTML = iconDrag();
+        drag.title = "Træk (desktop) / lang‑tryk (touch)";
+        drag.addEventListener("pointerdown", (e) => {
+          e.stopPropagation();
+          if(it.locked || state.cols[colKey].locked) return;
+          beginMaybeDrag(e, card, /*fromHandle*/ true);
+        });
+
+        left.appendChild(num);
+        left.appendChild(drag);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const t = document.createElement("div");
+        t.className = "title";
+        t.textContent = it.title;
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.textContent = `${it.key || ""} · ♩=${it.tempo || ""} · ${it.notes || ""}${it.cues ? " · " + it.cues : ""}`.replace(/ · $/,"");
+        meta.appendChild(t); meta.appendChild(sub);
+
+        const right = document.createElement("div");
+        right.className = "cardBtns";
+
+        const star = document.createElement("button");
+        star.className = "miniBtn star" + (it.locked ? " on" : "");
+        star.innerHTML = iconStar(it.locked);
+        star.title = it.locked ? "Låst" : "Lås";
+        star.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleItemLock(colKey, it.uid);
+        });
+
+        right.appendChild(star);
+
+        card.appendChild(left);
+        card.appendChild(meta);
+        card.appendChild(right);
+
+        // long-press drag anywhere on card (touch) — but not when locked; also keep scroll easy
+        card.addEventListener("pointerdown", (e) => {
+          if(e.pointerType !== "touch") return; // desktop uses handle
+          if(it.locked || state.cols[colKey].locked) return;
+          beginMaybeDrag(e, card, /*fromHandle*/ false);
+        });
+
+        list.appendChild(card);
+      });
+
+      // placeholder for empty lists
+      if(displayItems.length === 0){
+        const ph = document.createElement("div");
+        ph.className = "placeholder";
+        list.appendChild(ph);
+      }
+
+      col.appendChild(list);
+      grid.appendChild(col);
+
+      // wire tools
+      bLockCol.addEventListener("click", () => { toggleColLock(colKey); });
+      bTitle.addEventListener("click", () => { cycleFilter(colKey, "fTitle"); });
+      bKey.addEventListener("click", () => { cycleFilter(colKey, "fKey"); });
+      bTempo.addEventListener("click", () => { cycleFilter(colKey, "fTempo"); });
+    }
+
+    status("JS OK");
+  }
+
+  function btnTool(kind, inner, on, arrow){
+    const b = document.createElement("button");
+    b.className = "toolBtn" + (on ? " on" : "");
+    b.dataset.kind = kind;
+    b.innerHTML = `<span class="icon">${inner}</span><span class="arrow">${arrow||""}</span>`;
+    return b;
+  }
+
+  function cycleFilter(colKey, field){
+    const c = state.cols[colKey];
+    // Cycle 0->1->2->0. When a filter turns on, clear the others (single active filter per column).
+    const next = (c[field] + 1) % 3;
+    c.fTitle = (field==="fTitle") ? next : 0;
+    c.fKey   = (field==="fKey")   ? next : 0;
+    c.fTempo = (field==="fTempo") ? next : 0;
+    saveState();
+    render();
+  }
+  function toggleColLock(colKey){
+    const c = state.cols[colKey];
+    const nowLock = !c.locked;
+    c.locked = nowLock;
+
+    const arr = state.itemsByCol[colKey] || [];
+    if(nowLock){
+      // Lock EVERYTHING in this column (and remember lock order as shown)
+      for(const it of arr){
+        if(!it.locked){
+          it.locked = true;
+          it.lockSeq = ++state.lockSeqCounter;
+        }else{
+          if(typeof it.lockSeq !== "number"){
+            it.lockSeq = ++state.lockSeqCounter;
+          }
+        }
+      }
+      stableLockedTop(colKey);
+    }else{
+      // Unlock EVERYTHING in this column
+      for(const it of arr){
+        it.locked = false;
+        it.lockSeq = null;
+      }
+    }
+    saveState();
+    render();
+  }
+  function toggleItemLock(colKey, uid){
+    const it = findItemByUid(colKey, uid);
+    if(!it) return;
+    it.locked = !it.locked;
+    if(it.locked){
+      it.lockSeq = ++state.lockSeqCounter;
+    }else{
+      it.lockSeq = null;
+    }
+    // Keep locked titles stacked at top in all columns
+    stableLockedTop(colKey);
+    saveState();
+    render();
+  }
+
+  function stableLockedTop(colKey){
+    const arr = state.itemsByCol[colKey] || [];
+    const locked = arr.filter(x=>x.locked).sort((a,b)=>{
+      const aa = (typeof a.lockSeq === "number") ? a.lockSeq : Number.MAX_SAFE_INTEGER;
+      const bb = (typeof b.lockSeq === "number") ? b.lockSeq : Number.MAX_SAFE_INTEGER;
+      return aa - bb;
+    });
+    const free = arr.filter(x=>!x.locked);
+    state.itemsByCol[colKey] = locked.concat(free);
+  }
+
+  function findItemByUid(colKey, uid){
+    return state.itemsByCol[colKey].find(x=>x.uid===uid) || null;
+  }
+
+  // Find an item by uid across all columns
+  function getItemByUid(uid){
+    for(const colKey of ["set1","rep","set2"]){
+      const it = findItemByUid(colKey, uid);
+      if(it) return it;
+    }
+    return null;
+  }
+
+  // ===== Mix =====
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  
+function mix(){
+  // Pool = alle ulåste titler fra Sæt 1 + Repertoire + Sæt 2 (men respekter kolonnelås og titellås).
+  // Målet er at fordele ligeligt mellem Sæt 1 og Sæt 2; resten ryger i Repertoire.
+  const frozen = {
+    set1: !!state.cols.set1.locked,
+    rep:  !!state.cols.rep.locked,
+    set2: !!state.cols.set2.locked,
+  };
+
+  if(frozen.set1 && frozen.set2){
+    status("Mix: begge sæt er låst");
+    return;
+  }
+
+  const lockedByCol = {set1:[], rep:[], set2:[]};
+  const pool = [];
+
+  // Saml titler fra hver kolonne (kun hvis kolonnen ikke er låst)
+  for(const colKey of ["set1","rep","set2"]){
+    const arr = state.itemsByCol[colKey] || [];
+    if(frozen[colKey]){
+      // kolonnen røres ikke
+      stableLockedTop(colKey);
+      continue;
+    }
+    for(const it of arr){
+      if(it.locked) lockedByCol[colKey].push(it);
+      else pool.push(it);
+    }
+  }
+
+  shuffle(pool);
+
+  // Genbyg Sæt 1 og Sæt 2 (hvis de ikke er frosne) med deres låste titler i toppen
+  for(const k of ["set1","set2"]){
+    if(frozen[k]) continue;
+    state.itemsByCol[k] = lockedByCol[k].slice();
+    stableLockedTop(k);
+  }
+
+  // Fordel pool ligeligt mellem Sæt 1 og Sæt 2 (med respekt for MAX_PER_SET og frosne sæt)
+  const activeSets = ["set1","set2"].filter(k => !frozen[k]);
+  const canTake = (k)=> (state.itemsByCol[k].length < MAX_PER_SET);
+
+  if(activeSets.length === 1){
+    const k = activeSets[0];
+    while(pool.length && canTake(k)){
+      state.itemsByCol[k].push(pool.shift());
+    }
+  }else{
+    while(pool.length){
+      const a="set1", b="set2";
+      const canA = !frozen[a] && canTake(a);
+      const canB = !frozen[b] && canTake(b);
+      if(!canA && !canB) break;
+      const target = (canA && (!canB || state.itemsByCol[a].length <= state.itemsByCol[b].length)) ? a : b;
+      state.itemsByCol[target].push(pool.shift());
+    }
+  }
+
+  // Resten tilbage i Repertoire (hvis rep ikke er frosset)
+  if(!frozen.rep){
+    state.itemsByCol.rep = lockedByCol.rep.concat(pool);
+    stableLockedTop("rep");
+  }
+
+  // Lås-top igen for de kolonner vi rørte
+  for(const colKey of ["set1","set2","rep"]){
+    if(!frozen[colKey]) stableLockedTop(colKey);
+  }
+
+  saveState();
+  render();
+}
+
+// ===== Drag (custom, works on iPad + desktop) ===== (custom, works on iPad + desktop) =====
+  let dragCtx = null;
+
+  function beginMaybeDrag(e, card, fromHandle){
+    if(dragCtx) return;
+    const colKey = card.dataset.col;
+    if(state.cols[colKey].locked) return;
+
+    const isTouch = e.pointerType === "touch";
+    const longPressMs = fromHandle ? 0 : 320;
+
+    // Prevent accidental text selection
+    try{ card.setPointerCapture(e.pointerId); }catch(_){}
+
+    const startX = e.clientX, startY = e.clientY;
+    let moved = false;
+    let armed = false;
+
+    const armTimer = setTimeout(() => {
+      armed = true;
+      startDrag(e, card, colKey, startX, startY);
+    }, longPressMs);
+
+    function onMove(ev){
+      const dx = Math.abs(ev.clientX - startX);
+      const dy = Math.abs(ev.clientY - startY);
+      if(dx + dy > 10) moved = true;
+      // If user is clearly scrolling before drag armed, cancel
+      if(isTouch && !armed && moved){
+        clearTimeout(armTimer);
+        cleanup();
+      }
+      if(dragCtx){
+        ev.preventDefault();
+        moveDrag(ev.clientX, ev.clientY);
+      }
+    }
+    function onUp(ev){
+      clearTimeout(armTimer);
+      if(dragCtx){
+        ev.preventDefault();
+        endDrag(ev.clientX, ev.clientY);
+      }
+      cleanup();
+    }
+    function cleanup(){
+      window.removeEventListener("pointermove", onMove, {passive:false});
+      window.removeEventListener("pointerup", onUp, {passive:false});
+      window.removeEventListener("pointercancel", onUp, {passive:false});
+      try{ card.releasePointerCapture(e.pointerId); }catch(_){}
+    }
+
+    window.addEventListener("pointermove", onMove, {passive:false});
+    window.addEventListener("pointerup", onUp, {passive:false});
+    window.addEventListener("pointercancel", onUp, {passive:false});
+  }
+
+  function startDrag(e, card, colKey, x, y){
+    const uid = card.dataset.uid;
+    const src = colKey;
+    const item = findItemByUid(src, uid);
+    if(!item || item.locked) return;
+
+    const rect = card.getBoundingClientRect();
+    const offsetX = x - rect.left;
+    const offsetY = y - rect.top;
+
+    const ghost = card.cloneNode(true);
+    ghost.classList.add("ghost");
+    ghost.style.left = (x - offsetX) + "px";
+    ghost.style.top  = (y - offsetY) + "px";
+    ghost.style.width = Math.min(560, rect.width) + "px";
+    document.body.appendChild(ghost);
+
+    // Mark source card
+    card.style.opacity = "0.25";
+
+    dragCtx = {
+      uid, src,
+      ghost,
+      srcCard: card,
+      lastOverCol: null,
+      placeholder: null,
+      dropIndex: null,
+      offsetX, offsetY,
+    };
+
+    // During drag, prevent document selection/scrolling
+    document.body.style.cursor = "grabbing";
+    status("JS OK · drag");
+    moveDrag(x,y);
+  }
+
+  function moveDrag(x,y){
+    if(!dragCtx) return;
+    dragCtx.ghost.style.left = (x - dragCtx.offsetX) + "px";
+    dragCtx.ghost.style.top  = (y - dragCtx.offsetY) + "px";
+
+    // Find column under pointer
+    const el = document.elementFromPoint(x,y);
+    const colEl = el?.closest?.(".col");
+    const listEl = el?.closest?.(".list");
+    clearDropHints();
+    if(colEl) colEl.classList.add("dropHint");
+
+    if(!listEl){
+      dragCtx.lastOverCol = null;
+      return;
+    }
+    const toCol = listEl.dataset.col;
+
+    if(state.cols[toCol].locked) return;
+
+    dragCtx.lastOverCol = toCol;
+
+    // Create placeholder if missing
+    if(!dragCtx.placeholder){
+      dragCtx.placeholder = document.createElement("div");
+      dragCtx.placeholder.className = "placeholder";
+    }
+
+    // Insert placeholder at best position.
+    // IMPORTANT: Unlocked items must NOT appear to be placeable above locked block.
+    // So we clamp the visual insertion point to be at/after the locked items.
+    const cards = [...listEl.querySelectorAll(".card")].filter(c => c !== dragCtx.srcCard);
+    const lockedCount = (state.itemsByCol[toCol] || []).filter(x => x.locked).length;
+
+    let inserted = false;
+    // Only compare against cards AFTER the locked block
+    for(let i = Math.min(lockedCount, cards.length); i < cards.length; i++){
+      const c = cards[i];
+      const r = c.getBoundingClientRect();
+      if(y < r.top + r.height/2){
+        listEl.insertBefore(dragCtx.placeholder, c);
+        inserted = true;
+        break;
+      }
+    }
+    if(!inserted){
+      // If list is empty OR pointer is below last movable card, append.
+      // This also naturally places after locked items when list contains only locked cards.
+      listEl.appendChild(dragCtx.placeholder);
+    }
+
+    // Remember drop position
+    dragCtx.dropIndex = [...listEl.children].indexOf(dragCtx.placeholder);
+  }
+
+  function clearDropHints(){
+    document.querySelectorAll(".dropHint").forEach(el=>el.classList.remove("dropHint"));
+  }
+
+  function endDrag(x,y){
+    if(!dragCtx) return;
+    clearDropHints();
+    document.body.style.cursor = "";
+
+    const {uid, src, ghost, srcCard, placeholder} = dragCtx;
+    const dst = dragCtx.lastOverCol;
+
+    ghost.remove();
+    srcCard.style.opacity = "";
+
+    // Remove placeholder from DOM
+    if(placeholder && placeholder.parentElement) placeholder.parentElement.removeChild(placeholder);
+
+    if(!dst){
+      dragCtx = null;
+      status("JS OK");
+      return;
+    }
+
+    // Move item in state
+    const item = findItemByUid(src, uid);
+    if(!item){
+      dragCtx = null;
+      status("JS OK");
+      return;
+    }
+
+    // Remove from source
+    state.itemsByCol[src] = state.itemsByCol[src].filter(x=>x.uid!==uid);
+
+    // Compute insertion index in destination from tracked placeholder position
+    let idx = (typeof dragCtx.dropIndex === "number" && dragCtx.dropIndex >= 0) ? dragCtx.dropIndex : state.itemsByCol[dst].length;
+    idx = Math.min(state.itemsByCol[dst].length, idx);
+
+    // For sets: keep locked at top; insertion can't go above locked block unless item locked (it is not)
+    const lockedCount = state.itemsByCol[dst].filter(x=>x.locked).length;
+    idx = Math.max(idx, lockedCount);
+
+    state.itemsByCol[dst].splice(idx, 0, item);
+
+    // Enforce locked items at top after moves
+    stableLockedTop(dst);
+    stableLockedTop(src);
+
+    saveState();
+    render();
+    dragCtx = null;
+  }
+
+  // ===== Library module (init-on-open; safe) =====
+let libInited = false;
+let libOverlay = null;
+
+  function esc(s){
+    return String(s ?? "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/\"/g,"&quot;")
+      .replace(/'/g,"&#039;");
+  }
+
+
+function openLibrary(){
+  try{
+    if(!libInited) initLibraryOnce();
+    if(!libOverlay) libOverlay = document.getElementById("libOverlay");
+    if(!libOverlay) throw new Error("libOverlay missing");
+    libOverlay.hidden = false;
+	    document.body.classList.add("modalOpen");
+    renderLibraryList();
+    // focus close
+    document.getElementById("libClose").focus({preventScroll:true});
+  }catch(e){
+    console.warn("Library failed, keeping app alive", e);
+    status("Bibliotek-fejl (se console)");
+    if(libOverlay) libOverlay.hidden = true;
+	    document.body.classList.remove("modalOpen");
+  }
+}
+function closeLibrary(){
+  if(!libOverlay) libOverlay = document.getElementById("libOverlay");
+  if(!libOverlay) return;
+  libOverlay.hidden = true;
+	  document.body.classList.remove("modalOpen");
+  hideLibraryEditor();
+}
+
+function initLibraryOnce(){
+  libInited = true;
+  // Lazy DOM lookup (script is in <head>, library DOM is in <body>)
+  libOverlay = document.getElementById("libOverlay");
+  const libCloseBtn = document.getElementById("libClose");
+  if(!libOverlay || !libCloseBtn){ throw new Error("Library DOM not found"); }
+
+  libCloseBtn.addEventListener("click", closeLibrary);
+  libOverlay.addEventListener("click", (e)=>{ if(e.target === libOverlay) closeLibrary(); });
+  window.addEventListener("keydown", (e)=>{ if(!libOverlay.hidden && e.key==="Escape"){ e.preventDefault(); closeLibrary(); } });
+
+  document.getElementById("libSave").addEventListener("click", ()=> saveLibraryCsv());
+  document.getElementById("libLoad").addEventListener("click", ()=> document.getElementById("libFile").click());
+  document.getElementById("libFile").addEventListener("change", (e)=> loadLibraryCsv(e));
+  document.getElementById("libFactory").addEventListener("click", ()=>{
+    state = factoryState();
+    saveState(); render();
+    renderLibraryList();
+    status("Gendannet demo.");
+  });
+
+  document.getElementById("libNew").addEventListener("click", ()=> openLibraryEditor(null));
+  document.getElementById("libClearUnlocked").addEventListener("click", ()=> clearUnlockedTitles());
+}
+
+function openLibraryEditor(uid){
+  const wrap = document.getElementById("libEditorWrap");
+  wrap.hidden = false;
+
+  const it = uid ? (getItemByUid(uid) || null) : null;
+  wrap.dataset.uid = uid || "";
+
+  const title = it ? it.title : "";
+  const key = it ? it.key : "";
+  const tempo = (it && it.tempo!=null) ? String(it.tempo) : "";
+  const notes = it ? (it.notes||"") : "";
+  const cues = it ? (it.cues||"") : "";
+
+  wrap.innerHTML = `
+    <div class="libEditorGrid">
+      <input id="edTitle" placeholder="Titel" value="${esc(title)}">
+      <input id="edKey" placeholder="Toneart" value="${esc(key)}">
+      <input id="edTempo" placeholder="Tempo" value="${esc(tempo)}">
+      <textarea id="edNotes" placeholder="Form">${esc(notes)}</textarea>
+      <textarea id="edCues" placeholder="Cues">${esc(cues)}</textarea>
+    </div>
+    <div class="libEditorBar">
+      <button class="libBtn" id="edCancel" type="button">Annuller</button>
+      <button class="libBtn libPill" id="edSave" type="button">Gem</button>
+    </div>
+  `;
+
+  const onCancel = ()=> hideLibraryEditor();
+  const onSave = ()=>{
+    const nTitle = document.getElementById("edTitle").value.trim();
+    if(!nTitle){ status("Titel mangler"); return; }
+
+    const nKey = document.getElementById("edKey").value.trim();
+    const tRaw = document.getElementById("edTempo").value.trim();
+    const nTempo = tRaw==="" ? "" : Number(tRaw);
+    const nNotes = document.getElementById("edNotes").value.trim();
+    const nCues = document.getElementById("edCues").value.trim();
+
+    if(uid){
+      const item = getItemByUid(uid);
+      if(!item) { hideLibraryEditor(); return; }
+      item.title = nTitle;
+      item.key = nKey;
+      item.tempo = isNaN(nTempo) ? "" : nTempo;
+      item.notes = nNotes;
+      item.cues = nCues;
+    }else{
+      const newItem = {
+        id: "u"+Math.random().toString(16).slice(2),
+        uid: "u"+Math.random().toString(16).slice(2)+"_"+Math.random().toString(16).slice(2),
+        title: nTitle,
+        key: nKey,
+        tempo: isNaN(nTempo) ? "" : nTempo,
+        notes: nNotes,
+        cues: nCues,
+        locked: false,
+        lockSeq: 0,
+      };
+      // Ny titel skal lægges øverst i Repertoire-poolen
+      state.itemsByCol.rep.unshift(newItem);
+    }
+
+    saveState(); render();
+    renderLibraryList();
+    hideLibraryEditor();
+    status("Gemt.");
+  };
+
+  document.getElementById("edCancel").addEventListener("click", onCancel);
+  document.getElementById("edSave").addEventListener("click", onSave);
+
+  wrap.addEventListener("keydown", (e)=>{
+    if(e.key==="Escape"){ e.preventDefault(); onCancel(); }
+    if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); onSave(); }
+  });
+
+  wrap.scrollIntoView({block:"nearest"});
+}
+
+function hideLibraryEditor(){
+  const wrap = document.getElementById("libEditorWrap");
+  wrap.hidden = true;
+  wrap.innerHTML = "";
+  wrap.dataset.uid = "";
+}
+
+function renderLibraryList(){
+  const list = document.getElementById("libList");
+  // Vis repertoire først (så nye titler popper op øverst), derefter sæt 1 og sæt 2
+  const order = ["rep","set1","set2"];
+  const rows = [];
+  for(const col of order){
+    const arr = state.itemsByCol[col] || [];
+    for(const it of arr){
+      rows.push({col, it});
+    }
+  }
+
+  list.innerHTML = rows.map(({col,it})=>{
+    const meta = `${it.key||""}${it.tempo? " · ♩="+it.tempo:""}`;
+    return `
+      <div class="libRow" data-uid="${esc(it.uid)}">
+        <div class="t">${esc(it.title||"")}</div>
+        <div class="m">${esc(it.key||"")}</div>
+        <div class="m">${esc(it.tempo||"")}</div>
+        <div class="m">${esc(it.notes||"")}</div>
+        <div class="m">${esc(it.cues||"")}</div>
+        <div class="actions">
+          <button class="miniBtn" data-act="edit" title="Redigér">✏</button>
+          <button class="miniBtn" data-act="del" title="Slet">🗑</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  list.querySelectorAll(".miniBtn").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      const row = e.target.closest(".libRow");
+      const uid = row?.dataset?.uid;
+      if(!uid) return;
+      const act = e.target.dataset.act;
+      if(act==="edit"){
+        // Hvis der er en åben editor på en anden titel → luk som annuller
+        const cur = document.getElementById("libEditorWrap").dataset.uid || "";
+        if(cur && cur !== uid) hideLibraryEditor();
+        if(cur === uid) { hideLibraryEditor(); return; }
+        openLibraryEditor(uid);
+      }
+      if(act==="del"){
+        const it = getItemByUid(uid);
+        if(!it) return;
+        if(!confirm(`Slet "${it.title}"?`)) return;
+        for(const k of ["set1","rep","set2"]){
+          state.itemsByCol[k] = (state.itemsByCol[k]||[]).filter(x=>x.uid!==uid);
+        }
+        saveState(); render();
+        renderLibraryList();
+        hideLibraryEditor();
+        status("Slettet.");
+      }
+    });
+  });
+
+  // Disable ryd hvis ingen ulåste
+  const hasUnlocked = ["set1","rep","set2"].some(k => (state.itemsByCol[k]||[]).some(it=>!it.locked));
+  document.getElementById("libClearUnlocked").disabled = !hasUnlocked;
+  document.getElementById("libClearUnlocked").style.opacity = hasUnlocked ? "" : ".35";
+  document.getElementById("libClearUnlocked").style.pointerEvents = hasUnlocked ? "" : "none";
+}
+
+function clearUnlockedTitles(){
+  const hasUnlocked = ["set1","rep","set2"].some(k => (state.itemsByCol[k]||[]).some(it=>!it.locked));
+  if(!hasUnlocked) return;
+  if(!confirm("Ryd alle ulåste titler?\n(Låste titler påvirkes ikke.)")) return;
+  for(const k of ["set1","rep","set2"]){
+    state.itemsByCol[k] = (state.itemsByCol[k]||[]).filter(it=>it.locked);
+    stableLockedTop(k);
+  }
+  saveState(); render(); renderLibraryList();
+  hideLibraryEditor();
+  status("Ryddet.");
+}
+
+function csvLine(arr){
+  return arr.map(v=>{
+    const s = String(v ?? "");
+    const needs = /[",\n\r;]/.test(s);
+    const out = s.replace(/"/g,'""');
+    return needs ? `"${out}"` : out;
+  }).join(",");
+}
+
+function saveLibraryCsv(){
+  const headers = ["Titel","Toneart","Tempo","Form","Cues","_Kolonne","_Rækkefølge"];
+  const lines = [csvLine(headers)];
+  for(const col of ["set1","rep","set2"]){
+    const arr = state.itemsByCol[col]||[];
+    arr.forEach((it,idx)=>{
+      lines.push(csvLine([it.title||"", it.key||"", it.tempo??"", it.notes||"", it.cues||"", col, idx]));
+    });
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const name = (state.concertName ? state.concertName.trim().replace(/[^\w\- ]+/g,"").slice(0,40) : "repertoire") || "repertoire";
+  a.href = url;
+  a.download = `${name}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 800);
+  status("CSV gemt.");
+}
+
+function detectCsvDelimiter(text){
+  // Decide between "," and ";" by counting separators on the first non-empty line, ignoring quoted sections.
+  const lines = String(text||"").split(/\r?\n/);
+  const first = (lines.find(l => l.trim()!=="") || "");
+  const countSep = (sep)=>{
+    let inQ=false, c=0;
+    for(let i=0;i<first.length;i++){
+      const ch=first[i];
+      if(ch === '"'){
+        if(inQ && first[i+1] === '"'){ i++; continue; }
+        inQ = !inQ;
+      }else if(!inQ && ch === sep){
+        c++;
+      }
+    }
+    return c;
+  };
+  const commas = countSep(",");
+  const semis = countSep(";");
+  return semis > commas ? ";" : ",";
+}
+
+function parseCsv(text, delimiter){
+  // Simple RFC4180-ish parser supporting , or ; delimiter
+  const delim = delimiter || detectCsvDelimiter(text);
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQ = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){
+        if(text[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = false;
+      }else cur += ch;
+    }else{
+      if(ch === '"') inQ = true;
+      else if(ch === delim){ row.push(cur); cur=""; }
+      else if(ch === '\n'){
+        row.push(cur); rows.push(row); row=[]; cur="";
+      }else if(ch === '\r'){ /* skip */ }
+    }
+  }
+  row.push(cur); rows.push(row);
+  return rows.filter(r=>r.some(x=>String(x).trim()!==""));
+}
+
+
+function loadLibraryCsv(e){
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const buf = reader.result;
+      let raw = "";
+      if(buf && buf.byteLength!=null){
+        const u8 = new Uint8Array(buf);
+        // Heuristic: lots of NUL bytes => UTF-16LE
+        let nul=0; for(let i=1;i<u8.length;i+=2){ if(u8[i]===0) nul++; }
+        const isUtf16 = u8.length>10 && (nul / Math.max(1, Math.floor(u8.length/2))) > 0.3;
+        raw = new TextDecoder(isUtf16 ? 'utf-16le' : 'utf-8').decode(u8);
+      }else{
+        raw = String(buf||"");
+      }
+
+      // BOM + newline normalize
+      raw = String(raw||"").replace(/^\uFEFF/,"").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+
+      // Excel separator hint "sep=;"
+      if(/^sep\s*=\s*[,;\t]\s*\n/i.test(raw)){
+        raw = raw.replace(/^sep\s*=\s*[,;\t]\s*\n/i,"");
+      }
+
+      // --- parse (supports , ; \t) ---
+      const lines = raw.split("\n").map(l=>l.trim()).filter(l=>l.length>0);
+      if(!lines.length) throw new Error("Tom CSV");
+
+      const sample = lines.slice(0,10).join("\n");
+      const counts = {
+        "\t": (sample.match(/\t/g)||[]).length,
+        ";": (sample.match(/;/g)||[]).length,
+        ",": (sample.match(/,/g)||[]).length
+      };
+      let delim = ",";
+      if(counts["\t"]>=counts[";"] && counts["\t"]>=counts[","] && counts["\t"]>0) delim="\t";
+      else if(counts[";"]>=counts[","] && counts[";"]>0) delim=";";
+
+      const parseLine = (line, d)=>{
+        const out=[]; let cur=""; let inQ=false;
+        for(let i=0;i<line.length;i++){
+          const ch=line[i];
+          if(ch === '"'){
+            if(inQ && line[i+1] === '"'){ cur+='"'; i++; continue; }
+            inQ=!inQ; continue;
+          }
+          if(!inQ && ch===d){ out.push(cur.trim()); cur=""; continue; }
+          cur+=ch;
+        }
+        out.push(cur.trim());
+        return out;
+      };
+
+      const clean = (s)=>{
+        let out = String(s??"").replace(/^\uFEFF/,"").trim();
+        // remove surrounding quotes
+        if(out.startsWith('"') && out.endsWith('"') && out.length>=2) out = out.slice(1,-1);
+        return out.replace(/^\u200B+/,"").replace(/\u200B+$/g,"").trim();
+      };
+
+      let rows = lines.map(l=>parseLine(l, delim).map(clean));
+
+      // Fallback delimiter if we got 1 column and header contains separators
+      if(rows.length && rows[0].length===1){
+        const h0 = rows[0][0]||"";
+        if(h0.includes(",") || h0.includes(";")){
+          const d2 = h0.includes(",") ? "," : ";";
+          rows = lines.map(l=>parseLine(l, d2).map(clean));
+          delim = d2;
+        }
+      }
+
+      if(rows.length<2) throw new Error("Tom CSV");
+
+      let header = rows[0].map(h=>clean(h));
+      const norm = (s)=> clean(s).toLowerCase().replace(/\s+/g,"");
+
+      // Some files have no header – accept anyway
+      const looksHeader = ()=>{
+        const n = header.map(norm);
+        const hasTitle = n.some(x=>x==="titel"||x==="title"||x.includes("titel")||x.includes("title"));
+        const hasKey = n.some(x=>x==="toneart"||x==="key"||x.includes("toneart"));
+        const hasTempo = n.some(x=>x==="tempo");
+        return hasTitle && (hasKey || hasTempo || n.some(x=>x==="form"||x==="cues"||x==="_kolonne"||x==="_rækkefølge"||x==="_order"));
+      };
+
+      let dataStart = 1;
+      if(!looksHeader()){
+        // treat as data, create synthetic header
+        header = ["Titel","Toneart","Tempo","Form","Cues","_Kolonne","_Rækkefølge"];
+        dataStart = 0;
+      }
+
+      const idx = (name)=>{
+        const n = norm(name);
+        return header.findIndex(h=>norm(h)===n || norm(h).includes(n));
+      };
+
+      let iTitle = idx("Titel"); if(iTitle<0) iTitle = idx("Title"); if(iTitle<0) iTitle = idx("Navn"); if(iTitle<0) iTitle = 0;
+      let iKey   = idx("Toneart"); if(iKey<0) iKey = idx("Key");
+      let iTempo = idx("Tempo");
+      let iForm  = idx("Form");
+      let iCues  = idx("Cues");
+      let iCol   = idx("_Kolonne"); if(iCol<0) iCol = idx("_Column"); if(iCol<0) iCol = idx("Kolonne");
+      let iOrd   = idx("_Rækkefølge"); if(iOrd<0) iOrd = idx("_Order"); if(iOrd<0) iOrd = idx("Rækkefølge");
+
+      const makeSig = (t,k,tempo)=> `${String(t||"").trim().toLowerCase()}|${String(k||"").trim().toLowerCase()}|${String(tempo??"").trim()}`;
+
+      // Keep existing locked items (do NOT delete)
+      const lockedByCol = {set1:[], rep:[], set2:[]};
+      const lockedSigs = new Set();
+      for(const c of ["set1","rep","set2"]){
+        lockedByCol[c] = (state.itemsByCol[c]||[]).filter(it=>it && it.locked);
+        lockedByCol[c].forEach(it=>lockedSigs.add(makeSig(it.title,it.key,it.tempo)));
+      }
+
+      const imported = {set1:[], rep:[], set2:[]};
+
+      for(const r of rows.slice(dataStart)){
+        const title = clean(r[iTitle]||"");
+        if(!title) continue;
+
+        const key = iKey>=0 ? clean(r[iKey]||"") : "";
+        const tempoRaw = iTempo>=0 ? clean(r[iTempo]||"") : "";
+        const tempo = (tempoRaw==="" ? "" : (Number.isFinite(Number(tempoRaw)) ? Number(tempoRaw) : tempoRaw));
+        const notes = iForm>=0 ? clean(r[iForm]||"") : "";
+        const cues  = iCues>=0 ? clean(r[iCues]||"") : "";
+
+        const sig = makeSig(title,key,tempo);
+        if(lockedSigs.has(sig)) continue;
+
+        const colRaw = iCol>=0 ? clean(r[iCol]||"") : "rep";
+        const target = (colRaw==="set1"||colRaw==="set2"||colRaw==="rep") ? colRaw : "rep";
+        const ordRaw = iOrd>=0 ? clean(r[iOrd]||"") : "";
+        const ord = (ordRaw==="" ? 999999 : Number(ordRaw));
+        const it = {
+          uid: "u"+Math.random().toString(16).slice(2)+"_"+Math.random().toString(16).slice(2),
+          title, key, tempo,
+          notes, cues,
+          locked:false,
+          lockSeq:0,
+        };
+        imported[target].push({ord, it});
+      }
+
+      // Build new state arrays: locked first (in lockSeq order), then imported by ord
+      for(const c of ["set1","rep","set2"]){
+        const locked = lockedByCol[c].slice().sort((a,b)=>(a.lockSeq||0)-(b.lockSeq||0));
+        imported[c].sort((a,b)=>(a.ord||0)-(b.ord||0));
+        const arr = locked.concat(imported[c].map(x=>x.it));
+        state.itemsByCol[c] = arr;
+      }
+
+      // Re-number lockSeqCounter to stay ahead
+      const maxLock = Math.max(0, ...["set1","rep","set2"].flatMap(c=>(state.itemsByCol[c]||[]).filter(it=>it.locked).map(it=>it.lockSeq||0)));
+      state.lockSeqCounter = Math.max(state.lockSeqCounter||0, maxLock);
+
+      render();
+      renderLibraryList();
+      hideLibraryEditor();
+      status("CSV hentet.");
+    }catch(err){
+      console.warn(err);
+      alert("Kunne ikke læse CSV: " + (err?.message || err));
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+  // ===== Top actions =====
+  function status(txt){ statusEl.textContent = txt; }
+
+  document.getElementById("btnMix").addEventListener("click", () => mix());
+  document.getElementById("btnPrint").addEventListener("click", () => window.print());
+  document.getElementById("btnReset").addEventListener("click", () => { state = factoryState(); saveState(); render(); status("JS OK · gendan"); });
+  document.getElementById("btnLibrary").addEventListener("click", () => openLibrary());
+
+  concertEl.addEventListener("input", () => {
+    state.concertName = concertEl.value;
+    saveState();
+  });
+
+  // ===== Boot =====
+  let state = loadState();
+  concertEl.value = state.concertName || "";
+  render();
+
+})();</script>
+<!-- ===== Library modal (separate module, init-on-open) ===== -->
+<div id="libOverlay" class="modalOverlay" hidden>
+  <div class="modalCard" role="dialog" aria-modal="true" aria-label="Bibliotek">
+    <div class="modalTop">
+      <div class="modalTitle">Bibliotek</div>
+      <button class="modalClose" id="libClose" type="button" title="Luk">×</button>
+    </div>
+
+    <div class="libHint">Husk at <b>gemme</b> repertoire som CSV, hvis du har tilføjet/ændret titler – ellers forsvinder ændringerne, når du lukker fanen.</div>
+
+    <div class="libActions">
+      <button class="libBtn" id="libSave" type="button"><span class="libIco">⬇</span><span>Gem (CSV)</span></button>
+      <button class="libBtn" id="libLoad" type="button"><span class="libIco">⬆</span><span>Hent (CSV)</span></button>
+      <input id="libFile" type="file" accept=".csv" hidden>
+      <button class="libBtn libGhost" id="libFactory" type="button"><span class="libIco">⎌</span><span>Gendan demo</span></button>
+    </div>
+
+    <div class="libSmall">CSV indeholder: <b>Titel</b>, <b>Toneart</b>, <b>Tempo</b>, <b>Form</b>, <b>Cues</b> (+ skjult <b>_Kolonne</b>, <b>_Rækkefølge</b> til at genskabe sæt og rækkefølge).</div>
+
+    <div class="libSectionTop">
+      <div class="libSectionTitle">Repertoire (aktuelt)</div>
+      <div class="libSectionRight">
+        <button class="libBtn libPill" id="libNew" type="button"><span class="libIco">＋</span><span>Ny titel</span></button>
+        <button class="libDangerLink" id="libClearUnlocked" type="button" title="Fjerner alle ulåste titler (låste påvirkes ikke)"><span class="warn">⚠</span> Ryd ulåste titler…</button>
+      </div>
+    </div>
+
+    <div id="libEditorWrap" class="libEditorWrap" hidden></div>
+    <div id="libList" class="libList"></div>
+  </div>
+</div>
+</body>
+</html>
