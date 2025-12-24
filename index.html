@@ -252,15 +252,37 @@
     background: rgba(255,255,255,.03);
   }
 
-  /* Print: hide stars, buttons, header */
+  /* Print (scoped): app UI skjules, printRoot vises */
+  .printRoot{display:none;}
   @media print{
-    body{overflow:visible; background:#fff; color:#000;}
-    .header,.status,.toolBtn,.miniBtn,.colTools{display:none !important;}
-    .content{position:static; padding:0;}
-    .grid{grid-template-columns: 1fr 1fr; padding:0; gap:16px;}
-    .col{box-shadow:none; border:1px solid #ddd; background:#fff; min-height:auto;}
-    .card{box-shadow:none; background:#fff; border:1px solid #ddd;}
-    .sub{color:#333;}
+    @page { size: A4; margin: 12mm; }
+
+    /* PRINT-SCOPE: skjul ALT undtagen printRoot */
+    body > *:not(#printRoot) { display: none !important; }
+    #printRoot { display: block !important; }
+
+body{background:#fff !important; color:#000 !important; overflow:visible;}
+    /* Skjul app-UI og modal */
+    .header,.content,.status,.toolBtn,.miniBtn,.colTools,.modalOverlay{display:none !important;}
+    /* Vis printRoot (selv om [hidden]) */
+    #printRoot, #printRoot[hidden]{display:block !important;}
+    /* Page/layout */
+    .printPage{page-break-after:always; break-after:page;}
+    .printPage:last-child{page-break-after:auto; break-after:auto;}
+    .printHeader{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 800;
+      font-size: 17pt;
+      margin: 0 0 8mm 0;
+    }
+    .printList{display:flex; flex-direction:column; gap:6mm;}
+    .printItem{width:100%;}
+    .printTopRow{display:flex; align-items:baseline; justify-content:space-between; gap:10mm;}
+    .printTitle{font-weight:800; font-size:14.5pt; line-height:1.15; flex: 1 1 auto;}
+    .printRight{font-size:11pt; font-weight:700; white-space:nowrap; flex: 0 0 auto; text-align:right;}
+    .printNotes{margin-top:2.5mm; font-size:10.5pt; line-height:1.25; white-space:pre-wrap;}
+    /* bedre udnyttelse af bredde */
+    .printTitle, .printNotes{max-width:none;}
   }
 
   /* A: undgå tekstmarkering under drag */
@@ -1450,8 +1472,69 @@ function loadLibraryCsv(e){
   function status(txt){ statusEl.textContent = txt; }
 
   document.getElementById("btnMix").addEventListener("click", () => mix());
-  document.getElementById("btnPrint").addEventListener("click", () => window.print());
-  document.getElementById("btnReset").addEventListener("click", () => { state = factoryState(); saveState(); render(); status("JS OK · gendan"); });
+  document.getElementById("btnPrint").addEventListener("click", () => doPrint());
+
+  function escTxt(s){ return (s??"").toString().replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c])); }
+
+  function buildPrintPage(label, items){
+    const concertName = (document.getElementById("concertName")?.value || state.concertName || "").trim();
+    const head = `${escTxt(concertName || "Koncert")} — ${escTxt(label)}`;
+    const rows = (items||[]).map((it, idx)=>{
+      const right = `${escTxt(it.key||"")}${it.tempo? " · ♩="+escTxt(it.tempo):""}`;
+      const form = (it.notes||"").trim();
+      const cues = (it.cues||"").trim();
+      const notes = [form, cues].filter(Boolean).join("\n");
+      return `
+        <div class="printItem">
+          <div class="printTopRow">
+            <div class="printTitle">${idx+1}. ${escTxt(it.title||"")}</div>
+            <div class="printRight">${right}</div>
+          </div>
+          ${notes ? `<div class="printNotes">${escTxt(notes)}</div>` : ``}
+        </div>
+      `;
+    }).join("");
+    return `
+      <section class="printPage">
+        <div class="printHeader">${head}</div>
+        <div class="printList">${rows || `<div style="font-size:11pt; color:#333;">(ingen titler)</div>`}</div>
+      </section>
+    `;
+  }
+
+  function buildPrintRoot(){
+    const root = document.getElementById("printRoot");
+    if(!root) return;
+    const set1 = state.itemsByCol?.set1 || [];
+    const set2 = state.itemsByCol?.set2 || [];
+    const rep  = state.itemsByCol?.rep  || [];
+
+    // Build pages: Set 1, Set 2, and "Ekstranummer" if rep has items
+    let html = "";
+    html += buildPrintPage("Sæt 1", set1);
+    html += buildPrintPage("Sæt 2", set2);
+    if(rep.length){
+      html += buildPrintPage("Ekstranummer", rep);
+    }
+    root.innerHTML = html;
+  }
+
+  function doPrint(){
+    buildPrintRoot();
+    // Ensure print root is visible for print media (it is hidden on screen)
+    const root = document.getElementById("printRoot");
+    if(root) root.hidden = false;
+    // Use native print
+    window.print();
+    // After printing, keep it hidden in normal view
+    setTimeout(()=>{ if(root) root.hidden = true; }, 0);
+  }
+
+  // Keep printRoot up to date when printing via browser menu
+  window.addEventListener("beforeprint", ()=>{ buildPrintRoot(); const root=document.getElementById("printRoot"); if(root) root.hidden=false; });
+  window.addEventListener("afterprint",  ()=>{ const root=document.getElementById("printRoot"); if(root) root.hidden=true; });
+
+document.getElementById("btnReset").addEventListener("click", () => { state = factoryState(); saveState(); render(); status("JS OK · gendan"); });
   document.getElementById("btnLibrary").addEventListener("click", () => openLibrary());
 
   concertEl.addEventListener("input", () => {
@@ -1496,5 +1579,7 @@ function loadLibraryCsv(e){
     <div id="libList" class="libList"></div>
   </div>
 </div>
+
+<div id="printRoot" class="printRoot" hidden></div>
 </body>
 </html>
