@@ -325,6 +325,16 @@ body.modalOpen{overflow:hidden}
 .libEditorGrid input,.libEditorGrid textarea{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.22);color:#fff;padding:10px 12px;font-weight:650}
 .libEditorGrid textarea{min-height:56px;resize:vertical}
 .libEditorBar{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+
+  /* Help modal */
+  .helpBody{padding:14px 16px 18px}
+  .helpLead{color:var(--muted);font-size:13px;margin:6px 0 12px;line-height:1.35}
+  .helpList{display:flex;flex-direction:column;gap:10px}
+  .helpRow{display:flex;gap:10px;align-items:flex-start;border:1px solid #ffffff1a;background:#0f1a2760;border-radius:12px;padding:10px}
+  .helpIco{width:34px;flex:0 0 34px;height:34px;border-radius:10px;border:1px solid #ffffff22;display:flex;align-items:center;justify-content:center;font-weight:900;color:#eaffff;background:rgba(255,255,255,.06)}
+  .helpTxt{flex:1 1 auto}
+  .helpTxt b{font-weight:800}
+  .helpTxt .small{color:var(--muted);font-size:12px;line-height:1.25;margin-top:2px}
 </style>
 </head>
 <body>
@@ -339,6 +349,7 @@ body.modalOpen{overflow:hidden}
     <button id="btnPrint" class="iconBtn" title="Print" aria-label="Print">
       
       ⎙</button>
+      <button class="toolBtn" id="btnHelp" title="Hjælp">?</button>
     <button id="btnReset" class="iconBtn" title="Gendan" aria-label="Gendan">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 4v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -1547,13 +1558,46 @@ document.getElementById("btnReset").addEventListener("click", () => { state = fa
   concertEl.value = state.concertName || "";
   render();
 
-})();</script>
+})();
+
+// ===== Help modal wiring (safe) =====
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  function openHelp(){
+    const ov = qs("helpOverlay");
+    if(!ov) return;
+    ov.hidden = false;
+    document.body.classList.add("modalOpen");
+  }
+  function closeHelp(){
+    const ov = qs("helpOverlay");
+    if(!ov) return;
+    ov.hidden = true;
+    const lib = qs("libOverlay");
+    if(!(lib && !lib.hidden)) document.body.classList.remove("modalOpen");
+  }
+  document.addEventListener("click", (e)=>{
+    const t = e.target;
+    if(t.closest && (t.closest("#btnHelp") || t.closest("#libHelpBtn"))){ e.preventDefault(); openHelp(); return; }
+    if(t.closest && t.closest("#helpClose")){ e.preventDefault(); closeHelp(); return; }
+    const ov = t.closest && t.closest("#helpOverlay");
+    if(ov && t.id === "helpOverlay") closeHelp();
+  });
+  document.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape"){
+      const ov = qs("helpOverlay");
+      if(ov && !ov.hidden) closeHelp();
+    }
+  });
+})();
+</script>
 <!-- ===== Library modal (separate module, init-on-open) ===== -->
 <div id="libOverlay" class="modalOverlay" hidden>
   <div class="modalCard" role="dialog" aria-modal="true" aria-label="Bibliotek">
     <div class="modalTop">
       <div class="modalTitle">Bibliotek</div>
-      <button class="modalClose" id="libClose" type="button" title="Luk">×</button>
+      
+      <button class="miniBtn" id="libHelpBtn" title="Hjælp">?</button><button class="modalClose" id="libClose" type="button" title="Luk">×</button>
     </div>
 
     <div class="libHint">Husk at <b>gemme</b> repertoire som CSV, hvis du har tilføjet/ændret titler – ellers forsvinder ændringerne, når du lukker fanen.</div>
@@ -1581,5 +1625,27 @@ document.getElementById("btnReset").addEventListener("click", () => { state = fa
 </div>
 
 <div id="printRoot" class="printRoot" hidden></div>
+
+
+  <!-- ===== Help modal (quick) ===== -->
+  <div id="helpOverlay" class="modalOverlay" hidden>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-label="Hjælp">
+      <div class="modalTop">
+        <div class="modalTitle">Hjælp</div>
+        <button class="modalClose" id="helpClose" type="button" title="Luk">×</button>
+      </div>
+      <div class="helpBody">
+        <div class="helpLead">Hurtig hjælp – de vigtigste knapper og handlinger.</div>
+        <div class="helpList">
+          <div class="helpRow"><div class="helpIco">⋮⋮</div><div class="helpTxt"><b>Træk</b> sange med træk-håndtaget.<div class="small">På touch: rul normalt – træk kun via håndtaget.</div></div></div>
+          <div class="helpRow"><div class="helpIco">⭐</div><div class="helpTxt"><b>Lås</b> vigtige sange/kolonner med stjerner.<div class="small">Låste sange bliver i toppen og flyttes ikke af Mix/Sortér.</div></div></div>
+          <div class="helpRow"><div class="helpIco">⟳</div><div class="helpTxt"><b>Mix</b> fordeler ulåste sange mellem <b>Sæt 1</b> og <b>Sæt 2</b>.<div class="small">Repertoire bruges som pulje. Tryk flere gange til det føles rigtigt.</div></div></div>
+          <div class="helpRow"><div class="helpIco">⇅</div><div class="helpTxt"><b>Sortér</b> efter Titel/Toneart/Tempo.<div class="small">Tryk: stigende → faldende → ingen. Låste sange flytter sig ikke.</div></div></div>
+          <div class="helpRow"><div class="helpIco">⛭</div><div class="helpTxt"><b>Bibliotek</b> åbner redigering og CSV.<div class="small">Gem (CSV) før du lukker fanen, hvis du har ændret noget.</div></div></div>
+          <div class="helpRow"><div class="helpIco">⎙</div><div class="helpTxt"><b>Print</b> laver A4-sider: Sæt 1, Sæt 2 og evt. Ekstranummer.<div class="small">Titel + Form + Cues er lavet til at kunne læses på afstand.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
