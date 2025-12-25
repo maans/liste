@@ -335,6 +335,56 @@ body.modalOpen{overflow:hidden}
   .helpTxt{flex:1 1 auto}
   .helpTxt b{font-weight:800}
   .helpTxt .small{color:var(--muted);font-size:12px;line-height:1.25;margin-top:2px}
+
+
+/* ===== TOP ICON UPSCALE (safe) ===== */
+
+/* Giv headeren lidt mere luft – uden at ændre layout-flow */
+:root{
+  --iconBtnSize: 52px;   /* 50–56 er safe */
+  --iconFont: 26px;      /* for tekst/emoji-ikoner */
+  --iconSvg: 28px;       /* for SVG */
+}
+
+/* Ensart alle top-knapper */
+.header .iconBtn,
+.header #btnHelp.toolBtn{
+  width: var(--iconBtnSize);
+  height: var(--iconBtnSize);
+}
+
+/* Tekst/emoji-ikoner (⟳ ⛭ ⎙ ?) */
+.header .iconBtn{
+  font-size: var(--iconFont);
+  line-height: 1;
+}
+
+/* SVG-ikoner (Gendan) */
+.header .iconBtn svg{
+  width: var(--iconSvg);
+  height: var(--iconSvg);
+}
+
+/* Hjælp-knappen er toolBtn – match look & størrelse */
+.header #btnHelp.toolBtn{
+  border-radius: 999px;
+  font-size: var(--iconFont);
+}
+
+/* Små skærme: skru en anelse ned for ikke at presse inputfeltet */
+@media (max-width: 520px){
+  :root{
+    --iconBtnSize: 48px;
+    --iconFont: 24px;
+    --iconSvg: 26px;
+  }
+}
+
+/* Koncertnavn må gerne krympe i flex uden at skubbe ikonerne */
+.header .concert{
+  min-width: 0;
+  flex: 1 1 auto;
+}
 </style>
 </head>
 <body>
